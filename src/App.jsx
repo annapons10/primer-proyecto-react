@@ -59,6 +59,13 @@ function App() {
     }
     return null; //No hay ganador. 
   }
+
+  //Función para comprobar que el juego ha terminado proque estan todas las casillas llenas: 
+  const checkGameOver = (boardToCheck) =>{
+      //Si todos los elementos del tablero son diferentes a null, devuelve true: 
+      return boardToCheck.every(elemento => elemento !== null);
+  }
+
   //Creo la función que maneja todo:
   const updateBoard = (index) => {
     //Para no sobreescribir, si ya tiene algo, no escribe, o si hay un ganador tampoco: 
@@ -69,20 +76,36 @@ function App() {
     newBoard[index] = turn; 
     setBoard(newBoard);
     //Primero cambio el turno: 
-    const newTurn = turn === TURNS.X ? TURNS.O : TURNS.X;
-    //Uso el setTurn para cambiar el turn de dentro del hook:
-    setTurn(newTurn);
+    setTurn(turn === TURNS.X ? TURNS.O : TURNS.X);
     //Revisar si hay ganador: 
     const newWinner = checkWinner(newBoard);
     if(newWinner){
       setWinner(newWinner);
-    } //check winner para mostrarlo y notificarlo en pantalla. 
+    } 
+
+    const gameOver = checkGameOver(newBoard); 
+    if(gameOver){
+      //Empate
+      setWinner(false);
+    }
+  }
+
+  const reiniciarJuego = () => {
+    //VACIO EL BOARD DIRECTAMENTE SIN NECESIDAD DE CREAR NUEVOS ESTADOS:
+    setBoard(Array(9).fill(null));
+    //CAMBIO TURNO PARA EMPEZAR SI QUIERO RESETEARLO CON UN VALOR NUEVO, CREO UN ELEMENTO Y LO AÑADO. 
+    // Cambiamos el turno. Si el turno es X, cambiamos a O, y viceversa.
+    const nuevoTurno = turn === TURNS.X ? TURNS.O : TURNS.X;
+    setTurn(nuevoTurno); // Actualizamos el estado de `turn`
+    //Para que se elimine el div del anunciante. 
+    setWinner(null);
   }
 
 
   return (
     <main className='board'>
       <h1>Tic tac toe</h1>
+      <button onClick={reiniciarJuego}>Reset del Juego</button>
       <section className='game'>
         {
           board.map((value, index) => {
@@ -109,6 +132,31 @@ function App() {
           {TURNS.O}
         </Square>
       </section>
+
+      {/* Seccuón con  un renderizdo dinámico condicional para mostrar ganador, empate */}
+      {/* {condición && <Componente o JSX a renderizar>} */}
+      {
+        winner !== null && (
+          <section className='winner'>
+            <div className='text'>
+              <h2>
+                {
+                  winner === false ? 'Empate' : 'Ganó'
+                }
+              </h2>
+
+              <header className='win'>
+                {winner && <Square>{winner}</Square> }
+              </header>
+
+              <footer>
+                <button onClick={reiniciarJuego}>Empezar de nuevo </button>
+              </footer>
+            </div>
+          </section>
+        )
+      }
+
 
     </main>
   ) 
