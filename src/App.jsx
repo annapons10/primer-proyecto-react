@@ -1,70 +1,36 @@
 
 import { useState } from 'react'
+import confetti from "canvas-confetti"
+import { Square } from './components/Square.jsx'
 import './App.css'
-//TURNOS:
-const TURNS = {
-  X: 'x',
-  O: 'o'
-}
-
-
-//Creo el componente de square, cuadrado del tablero:
-const Square = ({children, isSelected, updateBoard, index}) =>{
-  //Si recibe el parámetro isSelected y es true, añade la clase, si no la deja en square:
-  const className = `square ${isSelected ? 'is-selected' : ''}`;
-  //Declaro una función fuera del onclick y no la llamo directamente porque necesito enviarle parámetros a la función y desde dentro no es correcto: 
-  const handleClick = () => {
-    updateBoard(index)
-  }
-
-  return(
-    <div onClick={handleClick} className={className}>
-      {children}
-    </div>
-  )
-
-}
-
-//Declaro todas las combinaciones posibles de ganador: 
-const WINNER_COMBOS = [ 
-  [0,1,2],
-  [3,4,5],
-  [6,7,8],
-  [0,3,6],
-  [1,4,7],
-  [2,5,8],
-  [0,4,8],
-  [2,4,6]
-]
+import { TURNS } from './constantes.js'
+import { checkWinner  } from './logic/board.js'
+import { WinnerModal } from './components/WinnerModal.jsx'
+import { checkGameOver } from './logic/board.js'
 
 function App() {
+  //Antes de crear el board vacío y empezar de 0, asegurarme de que en una partida anterior no se ha dejado una jugada a medias. 
+  //No puedo añadir un hook dentro de if/bucles, etc. Tienen que estar en el cuerpo del programa. 
+  //Puedo hacer que antes de asignar el board como tal. Se asegure de que no haya uno anterior: 
+  
   //Lo necesito aqui para poder actualizarlo dependiendo de su estado y que se vuelva a renderizar con 'x' o 'o'.
   //Creo un estado pasándole como datos iniciales el array vacío. 
-  const [board, setBoard ] = useState(Array(9).fill(null));
+  const [board, setBoard ] = useState(() => {
+    const boardFromStorage = window.localStorage.getItem('board');
+    return boardFromStorage ? JSON.parse(boardFromStorage) :
+    Array(9).fill(null)
+  });
+
   //Crear un estado para saber de quien es el turno:
-  const [turn, setTurn] = useState(TURNS.X);
+  const [turn, setTurn] = useState(() => {
+    const turnFromStorage = window.localStorage.getItem('turno');
+    console.log(turnFromStorage)
+    return turnFromStorage ?? TURNS.X;
+  });
+
   //Crear estado para ganador: 
   const [winner, setWinner] = useState(null); //Nulll no hay ganador , false hay un empate. 
 
-  //Método para comprobar si hay gandor:
-  const checkWinner = (boardToCheck) => {
-    for(const combo of WINNER_COMBOS){
-      const [a, b, c] = combo; 
-      if(boardToCheck[a] &&
-        boardToCheck[a] === boardToCheck[b] &&
-        boardToCheck[a] === boardToCheck[c]
-      ){
-        return boardToCheck[a]; //Devuelvo el ganador. 
-      }
-    }
-    return null; //No hay ganador. 
-  }
-
-  //Función para comprobar que el juego ha terminado proque estan todas las casillas llenas: 
-  const checkGameOver = (boardToCheck) =>{
-      //Si todos los elementos del tablero son diferentes a null, devuelve true: 
-      return boardToCheck.every(elemento => elemento !== null);
-  }
 
   //Creo la función que maneja todo:
   const updateBoard = (index) => {
@@ -76,13 +42,18 @@ function App() {
     newBoard[index] = turn; 
     setBoard(newBoard);
     //Primero cambio el turno: 
-    setTurn(turn === TURNS.X ? TURNS.O : TURNS.X);
+    const newTurn = turn === TURNS.X ? TURNS.O : TURNS.X; 
+    setTurn(newTurn);
+    //Guardar aqui partida antes de saber si hay ganador: 
+    window.localStorage.setItem('board', JSON.stringify(newBoard));
+    window.localStorage.setItem('turno', newTurn);
     //Revisar si hay ganador: 
     const newWinner = checkWinner(newBoard);
     if(newWinner){
+      confetti();
       setWinner(newWinner);
     } 
-
+  
     const gameOver = checkGameOver(newBoard); 
     if(gameOver){
       //Empate
@@ -99,6 +70,10 @@ function App() {
     setTurn(nuevoTurno); // Actualizamos el estado de `turn`
     //Para que se elimine el div del anunciante. 
     setWinner(null);
+
+    //ELIMINO VALORES DEL LOCALSTORAGE:
+    window.localStorage.removeItem('board');
+    window.localStorage.removeItem('turno');
   }
 
 
@@ -135,28 +110,7 @@ function App() {
 
       {/* Seccuón con  un renderizdo dinámico condicional para mostrar ganador, empate */}
       {/* {condición && <Componente o JSX a renderizar>} */}
-      {
-        winner !== null && (
-          <section className='winner'>
-            <div className='text'>
-              <h2>
-                {
-                  winner === false ? 'Empate' : 'Ganó'
-                }
-              </h2>
-
-              <header className='win'>
-                {winner && <Square>{winner}</Square> }
-              </header>
-
-              <footer>
-                <button onClick={reiniciarJuego}>Empezar de nuevo </button>
-              </footer>
-            </div>
-          </section>
-        )
-      }
-
+      <WinnerModal winner={winner}  reiniciarJuego={reiniciarJuego} />
 
     </main>
   ) 
